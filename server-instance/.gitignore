@@ -40,3 +40,4 @@ out/
 /java
 /server
 *.db
+!/server/eula.txt
