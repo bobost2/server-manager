@@ -81,7 +81,19 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
             return false; // TODO: Return EVersionAlreadyInstalled
         }
 
-        String url = "https://api.adoptium.net/v3/assets/latest/" + version + "/hotspot?os=alpine-linux&architecture=x64";
+        String arch = System.getProperty("os.arch").toLowerCase();
+
+        if (arch.contains("amd64") || arch.contains("x86_64")) {
+            arch = "x64";
+        } else if (arch.contains("arm64") || arch.contains("aarch64")) {
+            arch = "aarch64";
+        } else if (arch.contains("x86")) {
+            arch = "x86";
+        }
+
+        System.out.println("[!] Searching JDKs for " + arch);
+
+        String url = "https://api.adoptium.net/v3/assets/latest/" + version + "/hotspot?os=alpine-linux&architecture=" + arch + "&image_type=jdk";
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))

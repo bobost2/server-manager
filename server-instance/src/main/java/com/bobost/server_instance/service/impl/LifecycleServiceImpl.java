@@ -43,7 +43,7 @@ public class LifecycleServiceImpl implements LifecycleService {
         System.out.println("[!] Loading instance config...");
         InstanceConfig instanceConfig = instanceConfigRepository.findAll().getFirst();
 
-        if (instanceConfig.getSelectedMinecraftVersionType() == MinecraftVersionType.NONE) {
+        if (instanceConfig.getSelectedMinecraftVersionType() != MinecraftVersionType.NONE) {
             System.out.println("[!] Trying to load server jar...");
             runServer();
         } else {

@@ -19,13 +19,13 @@ public class JavaVersionApiController {
         return javaVersionsService.GetInstalledJavaVersions();
     }
 
-    @PostMapping("/download")
-    public boolean downloadJavaVersion(int version) {
+    @PostMapping("/download/{version}")
+    public boolean downloadJavaVersion(@PathVariable int version) {
         return javaVersionsService.DownloadJavaVersion(version);
     }
 
-    @DeleteMapping("/remove")
-    public boolean removeJavaVersion(int version) {
+    @DeleteMapping("/remove/{version}")
+    public boolean removeJavaVersion(@PathVariable int version) {
         return javaVersionsService.RemoveJavaVersion(version);
     }
 }
