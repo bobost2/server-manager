@@ -5,18 +5,25 @@ import com.bobost.server_instance.data.repository.InstanceConfigRepository;
 import com.bobost.server_instance.model.MinecraftVersionType;
 import com.bobost.server_instance.service.LifecycleService;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.io.*;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Service
 public class LifecycleServiceImpl implements LifecycleService {
 
     InstanceConfigRepository instanceConfigRepository;
+    private volatile ServerProcess serverProcess;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     public LifecycleServiceImpl(InstanceConfigRepository instanceConfigRepository) {
         this.instanceConfigRepository = instanceConfigRepository;
@@ -45,42 +52,36 @@ public class LifecycleServiceImpl implements LifecycleService {
 
         if (instanceConfig.getSelectedMinecraftVersionType() != MinecraftVersionType.NONE) {
             System.out.println("[!] Trying to load server jar...");
-            runServer();
+            startServer();
         } else {
             System.out.println("[!!] No version selected, manual setup required");
         }
     }
 
     @Override
-    public boolean runServer() {
+    public synchronized boolean startServer() {
+        // Don’t start if already running
+        if (serverProcess != null && serverProcess.isAlive()) {
+            return false;
+        }
+
         Path serverDir = Paths.get("./server");
         Path serverPath = serverDir.resolve("server.jar");
 
         // Check if the server jar exists
         if (Files.exists(serverPath)) {
-            long maxMemoryInMB = Runtime.getRuntime().maxMemory() / 1024 / 1024;
-            List<String> arguments = List.of("-Xmx" + maxMemoryInMB + "M", "-Xms" + maxMemoryInMB/2 + "M");
-
             InstanceConfig instanceConfig = instanceConfigRepository.findAll().getFirst();
-            String javaPath = "../java/" + instanceConfig.getSelectedJavaVersion() + "/bin/java";
 
-            List<String> command = new ArrayList<>();
-            command.add(javaPath);
-            command.addAll(arguments);
-            command.add("-jar");
-            command.add("server.jar");
-
-            ProcessBuilder processBuilder = new ProcessBuilder(command);
-            processBuilder.directory(serverDir.toFile());
-            processBuilder.inheritIO();
-
-            try {
-                Process process = processBuilder.start();
-                int exitCode = process.waitFor();
-                System.out.println("Process exited with code: " + exitCode);
-            } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
-            }
+            executor.submit(() -> {
+                try {
+                    ProcessBuilder pb = createProcessBuilder(instanceConfig.getSelectedJavaVersion(), serverDir.toFile());
+                    Process process = pb.start();
+                    serverProcess = new ServerProcess(process);
+                    serverProcess.readConsole(); // this will block until console closes
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
 
             return true;
         }
@@ -89,5 +90,131 @@ public class LifecycleServiceImpl implements LifecycleService {
         return false;
     }
 
+    @Override
+    public synchronized boolean sendCommand(String command) {
+        if (serverProcess != null && serverProcess.isAlive()) {
+            serverProcess.send(command);
+            return true;
+        }
+        return false;
+    }
 
+    @Override
+    public synchronized boolean stopServer(boolean force) {
+        if (force) {
+            if (serverProcess != null && serverProcess.isAlive()) {
+                serverProcess.stop();
+                return true;
+            }
+        } else {
+            if (serverProcess != null && serverProcess.isAlive()) {
+                serverProcess.send("stop");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean downloadJar(String link, String version, MinecraftVersionType type) {
+        URI uri = URI.create(link);
+        Path serverDir = Paths.get("./server", "/server.jar");
+
+        try (InputStream inputStream = uri.toURL().openStream()) {
+            Files.copy(inputStream, serverDir, StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("[!] Downloaded server jar from " + link);
+
+            System.out.println("[!] Updating server config...");
+            InstanceConfig instanceConfig = instanceConfigRepository.findAll().getFirst();
+            instanceConfig.setSelectedMinecraftVersionType(type);
+            instanceConfig.setSelectedMinecraftVersion(version);
+            instanceConfigRepository.save(instanceConfig);
+            System.out.println("[!] Updated server config");
+        } catch (IOException e) {
+            e.printStackTrace(); // TODO: Custom exception
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public boolean uploadJar(MultipartFile file, String version, MinecraftVersionType type) {
+        Path serverDir = Paths.get("./server", "/server.jar");
+        try (InputStream inputStream = file.getInputStream()) {
+            Files.copy(inputStream, serverDir, StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("[!] Uploaded server jar from " + file.getOriginalFilename());
+
+            System.out.println("[!] Updating server config...");
+            InstanceConfig instanceConfig = instanceConfigRepository.findAll().getFirst();
+            instanceConfig.setSelectedMinecraftVersionType(type);
+            instanceConfig.setSelectedMinecraftVersion(version);
+            instanceConfigRepository.save(instanceConfig);
+            System.out.println("[!] Updated server config");
+        } catch (IOException e) {
+            e.printStackTrace(); // TODO: Custom exception
+            return false;
+        }
+
+        return true;
+    }
+
+
+    // Server related methods
+
+    private ProcessBuilder createProcessBuilder(int javaVersion, File serverDir) {
+        long maxMemoryInMB = Runtime.getRuntime().maxMemory() / (1024 * 1024);
+        List<String> cmd = List.of(
+                "../java/" + javaVersion + "/bin/java",
+                "-Xmx" + maxMemoryInMB + "M",
+                "-Xms" + (maxMemoryInMB/2) + "M",
+                "-jar", "server.jar"
+        );
+        return new ProcessBuilder(cmd)
+                .directory(serverDir)
+                //.inheritIO()
+                .redirectErrorStream(true);
+    }
+
+    private static class ServerProcess {
+        private final Process process;
+        private final BufferedWriter stdin;
+        private final BufferedReader stdout;
+
+        ServerProcess(Process process) {
+            this.process = process;
+            this.stdin = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
+            this.stdout = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        }
+
+        boolean isAlive() {
+            return process.isAlive();
+        }
+
+        void readConsole() {
+            try {
+                String line;
+                while ((line = stdout.readLine()) != null) {
+                    // Push to WebSocket or log it
+                    System.out.println("[MC] " + line);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        synchronized void send(String command) {
+            try {
+                stdin.write(command);
+                stdin.newLine();
+                stdin.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        void stop() {
+            process.destroy();
+        }
+    }
 }

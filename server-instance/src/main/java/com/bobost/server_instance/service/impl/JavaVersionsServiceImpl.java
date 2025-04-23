@@ -1,5 +1,7 @@
 package com.bobost.server_instance.service.impl;
 
+import com.bobost.server_instance.data.entity.InstanceConfig;
+import com.bobost.server_instance.data.repository.InstanceConfigRepository;
 import com.bobost.server_instance.dto.adoptium.ApiResponse;
 import com.bobost.server_instance.dto.adoptium.BinaryInfo;
 import com.bobost.server_instance.service.JavaVersionsService;
@@ -26,6 +28,12 @@ import java.util.stream.Stream;
 
 @Service
 public class JavaVersionsServiceImpl implements JavaVersionsService {
+
+    InstanceConfigRepository instanceConfigRepository;
+
+    public JavaVersionsServiceImpl(InstanceConfigRepository instanceConfigRepository) {
+        this.instanceConfigRepository = instanceConfigRepository;
+    }
 
     @Override
     public ArrayList<Integer> DownloadableJavaVersions() {
@@ -161,6 +169,9 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
                             }
                         }
 
+                        Path javaBinPath = destDir.resolve(version + "").resolve("bin").resolve("java").normalize();
+                        javaBinPath.toFile().setExecutable(true);
+
                         foundJDK = true;
                         break;
                     }
@@ -202,6 +213,31 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
         }
 
         return true;
+    }
+
+    @Override
+    public boolean SelectJavaVersion(int version) {
+        InstanceConfig instanceConfig = instanceConfigRepository.findAll().getFirst();
+        Map<Integer, Boolean> installedJavaVersions = GetInstalledJavaVersions();
+
+        if (instanceConfig.getSelectedJavaVersion() == version) {
+            return false; // TODO: Return EVersionAlreadySelected
+        }
+
+        if (!installedJavaVersions.get(version)) {
+            return false; // TODO: Return EVersionNotInstalled
+        }
+
+        instanceConfig.setSelectedJavaVersion(version);
+        instanceConfigRepository.save(instanceConfig);
+
+        return true;
+    }
+
+    @Override
+    public int GetSelectedJavaVersion() {
+        InstanceConfig instanceConfig = instanceConfigRepository.findAll().getFirst();
+        return instanceConfig.getSelectedJavaVersion();
     }
 
 }

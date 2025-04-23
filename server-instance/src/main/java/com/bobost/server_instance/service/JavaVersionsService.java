@@ -8,4 +8,7 @@ public interface JavaVersionsService {
     Map<Integer, Boolean> GetInstalledJavaVersions();
     boolean DownloadJavaVersion(int version);
     boolean RemoveJavaVersion(int version);
+
+    boolean SelectJavaVersion(int version);
+    int GetSelectedJavaVersion();
 }

@@ -25,9 +25,7 @@ public class LifecycleApiController {
             return false;
         }
 
-        // TODO: Service implementation
-        System.out.println(minecraftVersionType);
-        return false;
+        return lifecycleService.downloadJar(link, version, minecraftVersionType);
     }
 
     @PostMapping("/uploadJar")
@@ -41,8 +39,21 @@ public class LifecycleApiController {
             return false;
         }
 
-        // TODO: Service implementation
-        System.out.println(minecraftVersionType);
-        return false;
+        return lifecycleService.uploadJar(file, version, minecraftVersionType);
+    }
+
+    @PostMapping("/run")
+    public boolean runServer() {
+        return lifecycleService.startServer();
+    }
+
+    @PostMapping("/sendCommand")
+    public boolean sendCommand(@RequestParam String command) {
+        return lifecycleService.sendCommand(command);
+    }
+
+    @PostMapping("/stop")
+    public boolean stopServer(@RequestParam(required = false) boolean force) {
+        return lifecycleService.stopServer(force);
     }
 }

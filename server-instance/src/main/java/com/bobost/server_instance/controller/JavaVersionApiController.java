@@ -28,4 +28,14 @@ public class JavaVersionApiController {
     public boolean removeJavaVersion(@PathVariable int version) {
         return javaVersionsService.RemoveJavaVersion(version);
     }
+
+    @PostMapping("/select/{version}")
+    public boolean selectJavaVersion(@PathVariable int version) {
+        return javaVersionsService.SelectJavaVersion(version);
+    }
+
+    @GetMapping("/selected")
+    public int getSelectedJavaVersion() {
+        return javaVersionsService.GetSelectedJavaVersion();
+    }
 }
