@@ -193,12 +193,15 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
 
     @Override
     public boolean RemoveJavaVersion(int version) {
+        InstanceConfig instanceConfig = instanceConfigRepository.findAll().getFirst();
+
+        if (instanceConfig.getSelectedJavaVersion() == version) {
+            return false; // TODO: Return EVersionSelected
+        }
         if (!GetInstalledJavaVersions().get(version)) {
             return false; // TODO: Return EVersionNotInstalled
         }
-        else if (version == 21) {
-            return false; // TODO: Return EVersionNotRemovable
-        }
+
         // Check if the version is selected too.
 
         Path javaPath = Paths.get("./java", version + "");

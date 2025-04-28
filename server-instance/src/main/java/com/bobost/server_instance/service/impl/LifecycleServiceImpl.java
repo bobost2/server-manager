@@ -109,7 +109,13 @@ public class LifecycleServiceImpl implements LifecycleService {
         } else {
             if (serverProcess != null && serverProcess.isAlive()) {
                 serverProcess.send("stop");
-                return true;
+                try {
+                    serverProcess.process.waitFor();
+                    return true;
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return false;
             }
         }
         return false;

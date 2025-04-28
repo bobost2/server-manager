@@ -1,12 +1,14 @@
-FROM alpine:latest
+FROM eclipse-temurin:21-alpine
 LABEL authors="bobost"
 
 WORKDIR /app
 
-COPY ./java ./java
+RUN mkdir -p /app/java/21 && cp -r /opt/java/openjdk/* /app/java/21/
+
+#COPY ./java ./java - We used to have the java executable in the folder
 COPY ./build/libs/*.jar application.jar
 
 COPY ./server ./server
 
-ENTRYPOINT ["./java/21/bin/java","-jar","application.jar"]
+ENTRYPOINT ["java","-jar","application.jar"]
 CMD []
