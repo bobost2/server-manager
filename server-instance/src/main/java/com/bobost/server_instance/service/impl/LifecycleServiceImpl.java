@@ -13,7 +13,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -59,13 +58,18 @@ public class LifecycleServiceImpl implements LifecycleService {
     }
 
     @Override
+    public synchronized boolean isServerRunning() {
+        return serverProcess != null && serverProcess.isAlive();
+    }
+
+    @Override
     public synchronized boolean startServer() {
         // Don’t start if already running
         if (serverProcess != null && serverProcess.isAlive()) {
             return false;
         }
 
-        Path serverDir = Paths.get("./server");
+        Path serverDir = Paths.get("./data/server");
         Path serverPath = serverDir.resolve("server.jar");
 
         // Check if the server jar exists
@@ -124,7 +128,7 @@ public class LifecycleServiceImpl implements LifecycleService {
     @Override
     public boolean downloadJar(String link, String version, MinecraftVersionType type) {
         URI uri = URI.create(link);
-        Path serverDir = Paths.get("./server", "/server.jar");
+        Path serverDir = Paths.get("./data/server", "/server.jar");
 
         try (InputStream inputStream = uri.toURL().openStream()) {
             Files.copy(inputStream, serverDir, StandardCopyOption.REPLACE_EXISTING);
@@ -146,7 +150,7 @@ public class LifecycleServiceImpl implements LifecycleService {
 
     @Override
     public boolean uploadJar(MultipartFile file, String version, MinecraftVersionType type) {
-        Path serverDir = Paths.get("./server", "/server.jar");
+        Path serverDir = Paths.get("./data/server", "/server.jar");
         try (InputStream inputStream = file.getInputStream()) {
             Files.copy(inputStream, serverDir, StandardCopyOption.REPLACE_EXISTING);
             System.out.println("[!] Uploaded server jar from " + file.getOriginalFilename());

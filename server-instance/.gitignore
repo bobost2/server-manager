@@ -38,6 +38,6 @@ out/
 
 ### Other ###
 /java
-/server
+/data/server
 *.db
-!/server/eula.txt
+!/data/server/eula.txt

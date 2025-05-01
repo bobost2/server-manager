@@ -5,6 +5,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface LifecycleService {
     void onStartup();
+    boolean isServerRunning();
     boolean startServer();
     boolean sendCommand(String command);
     boolean stopServer(boolean force);

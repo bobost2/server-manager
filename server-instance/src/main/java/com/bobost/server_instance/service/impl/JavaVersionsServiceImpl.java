@@ -52,7 +52,7 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
             javaVersions.put(version, false);
         }
 
-        Path javaPath = Paths.get("./java");
+        Path javaPath = Paths.get("./data/java");
 
         try {
             List<String> folderNames = new ArrayList<>();
@@ -127,12 +127,12 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
                         System.out.println("Downloading JDK from URL: " + downloadUrl);
 
                         URI uri = URI.create(downloadUrl);
-                        Path filePath = Paths.get("./java", "/jdk.tar.gz");
+                        Path filePath = Paths.get("./data/java", "/jdk.tar.gz");
                         try (InputStream in = uri.toURL().openStream()) {
                             Files.copy(in, filePath, StandardCopyOption.REPLACE_EXISTING);
                         }
 
-                        Path destDir = Paths.get("./java");
+                        Path destDir = Paths.get("./data/java");
                         try (InputStream iStr = Files.newInputStream(filePath);
                              BufferedInputStream biStr = new BufferedInputStream(iStr);
                              GzipCompressorInputStream gzipStr = new GzipCompressorInputStream(biStr);
@@ -204,7 +204,7 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
 
         // Check if the version is selected too.
 
-        Path javaPath = Paths.get("./java", version + "");
+        Path javaPath = Paths.get("./data/java", version + "");
         try (Stream<Path> paths = Files.walk(javaPath)) {
             //noinspection ResultOfMethodCallIgnored
             paths.sorted(Comparator.reverseOrder())

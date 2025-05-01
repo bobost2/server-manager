@@ -15,6 +15,7 @@
             </DockerPortBindingImpl>
           </list>
         </option>
+        <option name="commandLineOptions" value="--volume server-instance-data:/app/data" />
         <option name="sourceFilePath" value="Dockerfile" />
       </settings>
     </deployment>
