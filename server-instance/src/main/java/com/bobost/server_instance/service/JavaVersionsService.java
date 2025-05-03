@@ -6,9 +6,9 @@ import java.util.Map;
 public interface JavaVersionsService {
     ArrayList<Integer> DownloadableJavaVersions();
     Map<Integer, Boolean> GetInstalledJavaVersions();
-    boolean DownloadJavaVersion(int version);
-    boolean RemoveJavaVersion(int version);
+    void DownloadJavaVersion(int version);
+    void RemoveJavaVersion(int version);
 
-    boolean SelectJavaVersion(int version);
+    void SelectJavaVersion(int version);
     int GetSelectedJavaVersion();
 }

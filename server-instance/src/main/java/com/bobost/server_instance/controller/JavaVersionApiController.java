@@ -20,18 +20,18 @@ public class JavaVersionApiController {
     }
 
     @PostMapping("/download/{version}")
-    public boolean downloadJavaVersion(@PathVariable int version) {
-        return javaVersionsService.DownloadJavaVersion(version);
+    public void downloadJavaVersion(@PathVariable int version) {
+        javaVersionsService.DownloadJavaVersion(version);
     }
 
     @DeleteMapping("/remove/{version}")
-    public boolean removeJavaVersion(@PathVariable int version) {
-        return javaVersionsService.RemoveJavaVersion(version);
+    public void removeJavaVersion(@PathVariable int version) {
+        javaVersionsService.RemoveJavaVersion(version);
     }
 
     @PostMapping("/select/{version}")
-    public boolean selectJavaVersion(@PathVariable int version) {
-        return javaVersionsService.SelectJavaVersion(version);
+    public void selectJavaVersion(@PathVariable int version) {
+        javaVersionsService.SelectJavaVersion(version);
     }
 
     @GetMapping("/selected")

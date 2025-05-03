@@ -2,6 +2,7 @@ package com.bobost.server_instance.service.impl;
 
 import com.bobost.server_instance.data.entity.InstanceConfig;
 import com.bobost.server_instance.data.repository.InstanceConfigRepository;
+import com.bobost.server_instance.exception.server.*;
 import com.bobost.server_instance.model.MinecraftVersionType;
 import com.bobost.server_instance.service.LifecycleService;
 import org.springframework.stereotype.Service;
@@ -51,7 +52,11 @@ public class LifecycleServiceImpl implements LifecycleService {
 
         if (instanceConfig.getSelectedMinecraftVersionType() != MinecraftVersionType.NONE) {
             System.out.println("[!] Trying to load server jar...");
-            startServer();
+            try {
+                startServer();
+            } catch (JarMissingException | ServerRunningException e) {
+                System.out.println("[!!] " + e.getMessage());
+            }
         } else {
             System.out.println("[!!] No version selected, manual setup required");
         }
@@ -63,10 +68,10 @@ public class LifecycleServiceImpl implements LifecycleService {
     }
 
     @Override
-    public synchronized boolean startServer() {
+    public synchronized void startServer() throws ServerRunningException, JarMissingException {
         // Don’t start if already running
         if (serverProcess != null && serverProcess.isAlive()) {
-            return false;
+            throw new ServerRunningException("Server is already running.");
         }
 
         Path serverDir = Paths.get("./data/server");
@@ -83,50 +88,43 @@ public class LifecycleServiceImpl implements LifecycleService {
                     serverProcess = new ServerProcess(process);
                     serverProcess.readConsole(); // this will block until console closes
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    throw new ServerRuntimeException(e.toString());
                 }
             });
-
-            return true;
+        } else {
+            throw new JarMissingException("Server jar not found, please check your setup");
         }
-
-        System.out.println("[!!] Server jar not found, please check your setup");
-        return false;
     }
 
     @Override
-    public synchronized boolean sendCommand(String command) {
+    public synchronized void sendCommand(String command) {
         if (serverProcess != null && serverProcess.isAlive()) {
             serverProcess.send(command);
-            return true;
+        } else {
+            throw new ServerNotRunningException("Server is not running.");
         }
-        return false;
     }
 
     @Override
-    public synchronized boolean stopServer(boolean force) {
-        if (force) {
-            if (serverProcess != null && serverProcess.isAlive()) {
+    public synchronized void stopServer(boolean force) throws ServerNotRunningException {
+        if (serverProcess != null && serverProcess.isAlive()) {
+            if (force) {
                 serverProcess.stop();
-                return true;
+            } else {
+                try {
+                    serverProcess.send("stop");
+                    serverProcess.process.waitFor();
+                } catch (InterruptedException e) {
+                    throw new ServerRuntimeException(e.toString());
+                }
             }
         } else {
-            if (serverProcess != null && serverProcess.isAlive()) {
-                serverProcess.send("stop");
-                try {
-                    serverProcess.process.waitFor();
-                    return true;
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                return false;
-            }
+            throw new ServerNotRunningException("Server is not running.");
         }
-        return false;
     }
 
     @Override
-    public boolean downloadJar(String link, String version, MinecraftVersionType type) {
+    public void downloadJar(String link, String version, MinecraftVersionType type) {
         URI uri = URI.create(link);
         Path serverDir = Paths.get("./data/server", "/server.jar");
 
@@ -141,15 +139,12 @@ public class LifecycleServiceImpl implements LifecycleService {
             instanceConfigRepository.save(instanceConfig);
             System.out.println("[!] Updated server config");
         } catch (IOException e) {
-            e.printStackTrace(); // TODO: Custom exception
-            return false;
+            throw new JarDownloadFailureException(e.toString());
         }
-
-        return true;
     }
 
     @Override
-    public boolean uploadJar(MultipartFile file, String version, MinecraftVersionType type) {
+    public void uploadJar(MultipartFile file, String version, MinecraftVersionType type) {
         Path serverDir = Paths.get("./data/server", "/server.jar");
         try (InputStream inputStream = file.getInputStream()) {
             Files.copy(inputStream, serverDir, StandardCopyOption.REPLACE_EXISTING);
@@ -162,11 +157,8 @@ public class LifecycleServiceImpl implements LifecycleService {
             instanceConfigRepository.save(instanceConfig);
             System.out.println("[!] Updated server config");
         } catch (IOException e) {
-            e.printStackTrace(); // TODO: Custom exception
-            return false;
+            throw new JarUploadFailureException(e.toString());
         }
-
-        return true;
     }
 
 
@@ -209,7 +201,7 @@ public class LifecycleServiceImpl implements LifecycleService {
                     System.out.println("[MC] " + line);
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                System.out.println("[!!] Error reading console output: " + e.getMessage());
             }
         }
 
@@ -219,7 +211,7 @@ public class LifecycleServiceImpl implements LifecycleService {
                 stdin.newLine();
                 stdin.flush();
             } catch (IOException e) {
-                e.printStackTrace();
+                throw new SendServerCommandException(e.toString());
             }
         }
 

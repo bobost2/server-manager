@@ -4,6 +4,9 @@ import com.bobost.server_instance.data.entity.InstanceConfig;
 import com.bobost.server_instance.data.repository.InstanceConfigRepository;
 import com.bobost.server_instance.dto.adoptium.ApiResponse;
 import com.bobost.server_instance.dto.adoptium.BinaryInfo;
+import com.bobost.server_instance.exception.adoptium_api.AdoptiumAPIException;
+import com.bobost.server_instance.exception.adoptium_api.AdoptiumVersionMissingException;
+import com.bobost.server_instance.exception.java.*;
 import com.bobost.server_instance.service.JavaVersionsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -56,10 +59,11 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
 
         try {
             List<String> folderNames = new ArrayList<>();
-            Files.list(javaPath)
-                    .filter(Files::isDirectory)
-                    .forEach(folder -> folderNames.add(folder.getFileName().toString()));
-
+            try (Stream<Path> stream = Files.list(javaPath)) {
+                stream.filter(Files::isDirectory)
+                        .map(path -> path.getFileName().toString())
+                        .forEach(folderNames::add);
+            }
             String[] folderArray = folderNames.toArray(new String[0]);
 
             for (String folder : folderArray) {
@@ -73,20 +77,19 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace(); // TODO: Custom exception
+            throw new JavaFolderAccessException(e.toString());
         }
 
         return javaVersions;
     }
 
     @Override
-    // TODO: Return something different than boolean
-    public boolean DownloadJavaVersion(int version) {
+    public void DownloadJavaVersion(int version) {
         if (!DownloadableJavaVersions().contains(version)) {
-            return false; // TODO: Return EVersionMissing
+            throw new JavaVersionMissingException("Java version " + version + " is not available for download.");
         }
         else if(GetInstalledJavaVersions().get(version)) {
-            return false; // TODO: Return EVersionAlreadyInstalled
+            throw new JavaVersionAlreadyInstalledException("Java version " + version + " is already installed.");
         }
 
         String arch = System.getProperty("os.arch").toLowerCase();
@@ -102,13 +105,12 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
         System.out.println("[!] Searching JDKs for " + arch);
 
         String url = "https://api.adoptium.net/v3/assets/latest/" + version + "/hotspot?os=alpine-linux&architecture=" + arch + "&image_type=jdk";
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .GET()
-                .build();
 
-        try {
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
@@ -121,8 +123,7 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
 
                 for (ApiResponse actualResponse : apiResponse) {
                     BinaryInfo binaryInfo = actualResponse.getBinary();
-                    if (binaryInfo.getImageType().equals("jdk"))
-                    {
+                    if (binaryInfo.getImageType().equals("jdk")) {
                         String downloadUrl = binaryInfo.getPackageDetail().getLink();
                         System.out.println("Downloading JDK from URL: " + downloadUrl);
 
@@ -157,7 +158,7 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
                         String[] folderNames = destDir.toFile().list();
 
                         if (folderNames == null) {
-                            return false; // TODO: Custom exception
+                            throw new JavaVersionInstallationFailureException("No folders found in the java directory.");
                         }
 
                         for (String folder : folderNames) {
@@ -170,6 +171,7 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
                         }
 
                         Path javaBinPath = destDir.resolve(version + "").resolve("bin").resolve("java").normalize();
+                        //noinspection ResultOfMethodCallIgnored
                         javaBinPath.toFile().setExecutable(true);
 
                         foundJDK = true;
@@ -177,29 +179,29 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
                     }
                 }
 
-                if(!foundJDK) {
-                    return false; // TODO: Custom exception
+                if (!foundJDK) {
+                    throw new AdoptiumVersionMissingException("JDK for version " + version
+                            + " was not found for Alpine " + arch + " on the Adoptium API.");
                 }
             } else {
-                return false; // TODO: Custom exception
+                throw new AdoptiumAPIException("Error fetching JDK from Adoptium API - Error code " + response.statusCode());
             }
+        } catch (AdoptiumAPIException | AdoptiumVersionMissingException e) {
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            return false; // TODO: Custom exception
+            throw new JavaVersionInstallationFailureException(e.toString());
         }
-
-        return true;
     }
 
     @Override
-    public boolean RemoveJavaVersion(int version) {
+    public void RemoveJavaVersion(int version) {
         InstanceConfig instanceConfig = instanceConfigRepository.findAll().getFirst();
 
         if (instanceConfig.getSelectedJavaVersion() == version) {
-            return false; // TODO: Return EVersionSelected
+            throw new JavaVersionSelectedException("You cannot remove the Java version you are currently using.");
         }
         if (!GetInstalledJavaVersions().get(version)) {
-            return false; // TODO: Return EVersionNotInstalled
+            throw new JavaVersionNotInstalledException("Java version " + version + " is not installed.");
         }
 
         // Check if the version is selected too.
@@ -211,30 +213,25 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
                     .map(Path::toFile)
                     .forEach(File::delete);
         } catch (IOException e) {
-            e.printStackTrace(); // Handle exception
-            return false; // TODO: Custom exception
+            throw new JavaVersionRemovalFailureException(e.toString());
         }
-
-        return true;
     }
 
     @Override
-    public boolean SelectJavaVersion(int version) {
+    public void SelectJavaVersion(int version) {
         InstanceConfig instanceConfig = instanceConfigRepository.findAll().getFirst();
         Map<Integer, Boolean> installedJavaVersions = GetInstalledJavaVersions();
 
         if (instanceConfig.getSelectedJavaVersion() == version) {
-            return false; // TODO: Return EVersionAlreadySelected
+            throw new JavaVersionSelectedException("Java version " + version + " is already selected.");
         }
 
         if (!installedJavaVersions.get(version)) {
-            return false; // TODO: Return EVersionNotInstalled
+            throw new JavaVersionNotInstalledException("Java version " + version + " is not installed.");
         }
 
         instanceConfig.setSelectedJavaVersion(version);
         instanceConfigRepository.save(instanceConfig);
-
-        return true;
     }
 
     @Override
