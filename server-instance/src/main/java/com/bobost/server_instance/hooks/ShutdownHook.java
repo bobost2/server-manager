@@ -14,9 +14,9 @@ public class ShutdownHook {
 
     @PreDestroy
     public void onShutdown() {
-        System.out.println("[!!] Shutting down application...");
+        System.out.println("[!] Shutting down application...");
         if (lifecycleService.isServerRunning()) {
-            System.out.println("[!!] Server is running, attempting to stop it...");
+            System.out.println("[!] Server is running, attempting to stop it...");
             lifecycleService.stopServer(false);
         }
     }

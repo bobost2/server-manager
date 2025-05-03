@@ -4,6 +4,7 @@ import com.bobost.server_instance.data.entity.InstanceConfig;
 import com.bobost.server_instance.data.repository.InstanceConfigRepository;
 import com.bobost.server_instance.exception.server.*;
 import com.bobost.server_instance.model.MinecraftVersionType;
+import com.bobost.server_instance.service.JavaVersionsService;
 import com.bobost.server_instance.service.LifecycleService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,11 +23,13 @@ import java.util.concurrent.Executors;
 public class LifecycleServiceImpl implements LifecycleService {
 
     InstanceConfigRepository instanceConfigRepository;
+    JavaVersionsService javaVersionsService;
     private volatile ServerProcess serverProcess;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-    public LifecycleServiceImpl(InstanceConfigRepository instanceConfigRepository) {
+    public LifecycleServiceImpl(InstanceConfigRepository instanceConfigRepository, JavaVersionsService javaVersionsService) {
         this.instanceConfigRepository = instanceConfigRepository;
+        this.javaVersionsService = javaVersionsService;
     }
 
     @Override
@@ -45,6 +48,14 @@ public class LifecycleServiceImpl implements LifecycleService {
                     ""
             );
             instanceConfigRepository.save(instanceConfig);
+        }
+
+        // Refresh Java versions
+        try {
+            System.out.println("[!] Refreshing Java versions from API...");
+            javaVersionsService.UpdateAdoptiumVersionRepository();
+        } catch (Exception ex) {
+            System.out.println("[!!] Error refreshing Java versions from API: " + ex.getMessage());
         }
 
         System.out.println("[!] Loading instance config...");

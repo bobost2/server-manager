@@ -15,8 +15,8 @@ public class JavaVersionApiController {
     }
 
     @GetMapping
-    public Map<Integer, Boolean> getJavaVersions() {
-        return javaVersionsService.GetInstalledJavaVersions();
+    public Map<Integer, Boolean> getJavaVersions(@RequestParam(defaultValue = "false") boolean refreshRepo) {
+        return javaVersionsService.GetInstalledJavaVersions(refreshRepo);
     }
 
     @PostMapping("/download/{version}")

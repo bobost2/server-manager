@@ -1,9 +1,12 @@
 package com.bobost.server_instance.service.impl;
 
 import com.bobost.server_instance.data.entity.InstanceConfig;
+import com.bobost.server_instance.data.entity.JavaVersions;
 import com.bobost.server_instance.data.repository.InstanceConfigRepository;
+import com.bobost.server_instance.data.repository.JavaVersionsRepository;
 import com.bobost.server_instance.dto.adoptium.ApiResponse;
 import com.bobost.server_instance.dto.adoptium.BinaryInfo;
+import com.bobost.server_instance.dto.adoptium.VersionsAPI;
 import com.bobost.server_instance.exception.adoptium_api.AdoptiumAPIException;
 import com.bobost.server_instance.exception.adoptium_api.AdoptiumVersionMissingException;
 import com.bobost.server_instance.exception.java.*;
@@ -27,28 +30,117 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
 public class JavaVersionsServiceImpl implements JavaVersionsService {
 
     InstanceConfigRepository instanceConfigRepository;
+    JavaVersionsRepository javaVersionsRepository;
 
-    public JavaVersionsServiceImpl(InstanceConfigRepository instanceConfigRepository) {
+    public JavaVersionsServiceImpl(InstanceConfigRepository instanceConfigRepository,
+                                   JavaVersionsRepository javaVersionsRepository) {
         this.instanceConfigRepository = instanceConfigRepository;
+        this.javaVersionsRepository = javaVersionsRepository;
+    }
+
+    private String GetSystemArch() {
+        String arch = System.getProperty("os.arch").toLowerCase();
+
+        if (arch.contains("amd64") || arch.contains("x86_64")) {
+            arch = "x64";
+        } else if (arch.contains("arm64") || arch.contains("aarch64")) {
+            arch = "aarch64";
+        } else if (arch.contains("x86")) {
+            arch = "x86";
+        }
+
+        return arch;
+    }
+
+    @Override
+    public void UpdateAdoptiumVersionRepository() throws AdoptiumAPIException {
+        int currentPage = 0;
+        boolean hasNextPage = true;
+        Set<Integer> availableVersions = new TreeSet<>();
+
+        while (hasNextPage) {
+            String arch = GetSystemArch();
+
+            String url = "https://api.adoptium.net/v3/info/release_versions?" +
+                    "architecture=" + arch +
+                    "&image_type=jdk" +
+                    "&os=alpine-linux" +
+                    "&page=" + currentPage +
+                    "&page_size=50" +
+                    "&project=jdk" +
+                    "&release_type=ga&semver=true&sort_method=DEFAULT&sort_order=DESC&vendor=eclipse";
+
+            try (HttpClient client = HttpClient.newHttpClient()) {
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .GET()
+                        .build();
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                if (response.statusCode() == 200) {
+                    String responseBody = response.body();
+
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    VersionsAPI apiResponse = objectMapper.readValue(responseBody, VersionsAPI.class);
+
+                    var versions = apiResponse.getVersions();
+
+                    if (versions.length < 50) {
+                        hasNextPage = false;
+                    } else {
+                        currentPage++;
+                    }
+
+                    for (var version : versions)
+                    {
+                        availableVersions.add(version.getMajor());
+                    }
+
+                } else {
+                    throw new AdoptiumAPIException("Error fetching JDK from Adoptium API - Error code "
+                            + response.statusCode());
+                }
+
+            }
+            catch (AdoptiumAPIException e) {
+                throw e;
+            } catch (Exception ex) {
+                throw new AdoptiumAPIException(ex.toString());
+            }
+        }
+
+        javaVersionsRepository.deleteAll();
+        List<JavaVersions> javaVersions = new ArrayList<>();
+        for (int version : availableVersions) {
+            JavaVersions javaVersion = new JavaVersions(version);
+            javaVersions.add(javaVersion);
+        }
+        javaVersionsRepository.saveAll(javaVersions);
     }
 
     @Override
     public ArrayList<Integer> DownloadableJavaVersions() {
-        // TODO: Can you fetch this instead of hardcoding it?
-        return new ArrayList<>(
-                List.of(8, 11, 16, 17, 18, 19, 20, 21, 22, 23, 24)
-        );
+        List<JavaVersions> javaVersions = javaVersionsRepository.findAll();
+
+        return javaVersions.stream()
+                .map(JavaVersions::getVersion)
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     @Override
-    public Map<Integer, Boolean> GetInstalledJavaVersions() {
-        Map<Integer, Boolean> javaVersions = new HashMap<>();
+    public Map<Integer, Boolean> GetInstalledJavaVersions(boolean refreshRepo) {
+        if (refreshRepo) {
+            UpdateAdoptiumVersionRepository();
+        }
+
+        Map<Integer, Boolean> javaVersions = new TreeMap<>();
 
         // Put downloadable versions
         for (int version : DownloadableJavaVersions()) {
@@ -92,15 +184,7 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
             throw new JavaVersionAlreadyInstalledException("Java version " + version + " is already installed.");
         }
 
-        String arch = System.getProperty("os.arch").toLowerCase();
-
-        if (arch.contains("amd64") || arch.contains("x86_64")) {
-            arch = "x64";
-        } else if (arch.contains("arm64") || arch.contains("aarch64")) {
-            arch = "aarch64";
-        } else if (arch.contains("x86")) {
-            arch = "x86";
-        }
+        String arch = GetSystemArch();
 
         System.out.println("[!] Searching JDKs for " + arch);
 
@@ -184,7 +268,8 @@ public class JavaVersionsServiceImpl implements JavaVersionsService {
                             + " was not found for Alpine " + arch + " on the Adoptium API.");
                 }
             } else {
-                throw new AdoptiumAPIException("Error fetching JDK from Adoptium API - Error code " + response.statusCode());
+                throw new AdoptiumAPIException("Error fetching JDK from Adoptium API - Error code "
+                        + response.statusCode());
             }
         } catch (AdoptiumAPIException | AdoptiumVersionMissingException e) {
             throw e;
