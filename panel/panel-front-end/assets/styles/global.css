@@ -1,0 +1,8 @@
+body {
+    --border-color: #ffffff40;
+    --text-color-1: #ccc;
+    --green-lighter: #4b6f49;
+    --green-darker: #2d4830;
+    color: var(--text-color-1);
+    background: linear-gradient(var(--green-lighter), var(--green-darker)) fixed;
+}
