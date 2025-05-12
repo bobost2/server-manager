@@ -4,6 +4,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['vuetify-nuxt-module'],
   css: ['@/assets/styles/global.css'],
+  ssr: false,
   vuetify: {
     vuetifyOptions: {
       theme: {
