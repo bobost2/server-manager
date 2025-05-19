@@ -32,6 +32,7 @@ dependencies {
 	implementation 'org.springframework.security:spring-security-oauth2-jose'
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.flywaydb:flyway-database-postgresql'
+	implementation 'org.jboss.aerogear:aerogear-otp-java:1.0.0'
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'org.postgresql:postgresql'

@@ -1,7 +1,10 @@
 package com.bobost.panel_back_end.config;
 
+import com.bobost.panel_back_end.exception.user.InvalidOTPCodeException;
+import com.bobost.panel_back_end.exception.user.OTPRequiredException;
 import com.bobost.panel_back_end.filter.JsonUsernamePasswordAuthFilter;
 import com.bobost.panel_back_end.service.CustomUserDetailsService;
+import com.bobost.panel_back_end.service.TotpService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +28,11 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+    private final TotpService totpService;
+
+    public SecurityConfig(TotpService totpService) {
+        this.totpService = totpService;
+    }
 
     @Bean
     AuthenticationManager authManager(HttpSecurity http, CustomUserDetailsService customUserDetailsService,
@@ -44,7 +52,7 @@ public class SecurityConfig {
     @SuppressWarnings("ExtractMethodRecommender")
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http, AuthenticationManager authManager) throws Exception {
-        var jsonFilter = new JsonUsernamePasswordAuthFilter(authManager);
+        var jsonFilter = new JsonUsernamePasswordAuthFilter(authManager, totpService);
         jsonFilter.setAuthenticationSuccessHandler(
                 (request, response, authentication) -> {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -56,8 +64,19 @@ public class SecurityConfig {
                     response.setStatus(HttpServletResponse.SC_OK);
                 });
         jsonFilter.setAuthenticationFailureHandler(
-                (request, response, authentication)
-                        -> response.setStatus(HttpServletResponse.SC_UNAUTHORIZED)
+                (request, response, exception) -> {
+                    response.setContentType("application/json");
+                    if (exception instanceof InvalidOTPCodeException) {
+                        response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                        response.getWriter().print("{\"error\": \"OTP_INVALID\"}");
+                    } else if (exception instanceof OTPRequiredException) {
+                        response.setStatus(HttpStatus.FORBIDDEN.value());
+                        response.getWriter().print("{\"error\": \"OTP_REQUIRED\"}");
+                    } else {
+                        response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                        response.getWriter().print("{\"error\": \"INVALID_CREDENTIALS\"}");
+                    }
+                }
         );
 
         http
@@ -74,6 +93,7 @@ public class SecurityConfig {
                 .addFilterAt(jsonFilter, UsernamePasswordAuthenticationFilter.class)
                 .logout(logout -> logout
                         .logoutUrl("/user/logout")
+                        .deleteCookies("JSESSIONID")
                         .logoutSuccessHandler(
                                 (request, response, authentication) ->
                                         response.setStatus(HttpStatus.OK.value())

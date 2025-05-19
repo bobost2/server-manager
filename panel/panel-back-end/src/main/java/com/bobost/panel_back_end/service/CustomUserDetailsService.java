@@ -21,13 +21,13 @@ public class CustomUserDetailsService implements UserDetailsService {
         String role;
 
         if (user.isAdmin()) {
-            role = "ROLE_ADMIN";
+            role = "ADMIN";
         } else {
             var userRole = user.getRole();
             if (userRole != null) {
-                role = userRole.getName();
+                role = userRole.getName(); //TODO: Get the separate permission instead
             } else {
-                role = "ROLE_NONE";
+                role = "NONE";
             }
         }
 

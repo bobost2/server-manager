@@ -1,10 +1,16 @@
 // noinspection JSUnusedLocalSymbols,JSUnusedGlobalSymbols
 
-export default defineNuxtRouteMiddleware((to, from) => {
+import type {NavigationFailure, NavigationGuardReturn, RouteLocationRaw} from "#vue-router";
 
-    // Not authenticated!
-    // Placeholder code, change in future!
-    if ( useCookie("auth").value != null && useCookie("auth").value != "" ) {
-        return navigateTo('/');
-    }
+export default defineNuxtRouteMiddleware(async (to, from) => {
+    let returnNav: Promise<void | NavigationFailure | false> | false | void | RouteLocationRaw = undefined;
+
+    await $fetch("http://localhost:8080/user/info", {
+        credentials: 'include'
+    }).then(() => {
+        returnNav = navigateTo('/');
+    }).catch(() => {
+    })
+
+    return returnNav;
 })

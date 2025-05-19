@@ -1,7 +1,20 @@
 <script setup lang="ts">
-  function onLogout() {
-    alert('logout');
+  import type {UserInfo} from "~/types/user-info";
+
+  async function onLogout() {
+    await $fetch('http://localhost:8080/user/logout', {
+      method: 'POST',
+      credentials: 'include'
+    }).catch(() => {
+    }).finally(() => {
+      navigateTo("/login");
+    })
   }
+
+  const { data } = await useFetch<UserInfo>("http://localhost:8080/user/info", {
+    method: 'GET',
+    credentials: 'include'
+  })
 </script>
 
 <template>
@@ -22,11 +35,11 @@
       <v-btn variant="text" to="/repository" exact>
         Repository
       </v-btn>
-      <v-btn variant="text" to="/panel-management" exact>
-        Admin
+      <v-btn v-if="data?.permissions?.includes('ADMIN')" variant="text" to="/panel-management" exact>
+        Panel Management
       </v-btn>
       <v-btn variant="text">
-        #Username#
+        {{data?.username}}
         <v-menu activator="parent">
           <v-list style="background: var(--green-darker); border: 1px var(--border-color) solid;">
             <v-list-item to="/user-settings" exact key="settings" value="settings">
