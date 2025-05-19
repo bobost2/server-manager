@@ -9,6 +9,8 @@ useHead({
 })
 
 const showPass = ref(false)
+const username = ref('')
+const password = ref('')
 
 function createCookie() {
   const test = useCookie("auth", {
@@ -19,8 +21,25 @@ function createCookie() {
   navigateTo("/");
 }
 
-function onSubmit() {
-  alert('test');
+async function onSubmit() {
+  //alert(username.value + " " + password.value);
+
+  await $fetch('http://localhost:8080/user/login', {
+    method: 'POST',
+    body: {
+      username: username.value,
+      password: password.value
+    },
+    credentials: 'include'
+  }).catch(error => {
+    console.log(error.statusCode)
+  })
+
+  await $fetch("http://localhost:8080/user/info", {
+    credentials: 'include'
+  }).then((res) => {
+    console.log(res)
+  })
 }
 
 </script>
@@ -30,10 +49,11 @@ function onSubmit() {
     <div class="form-container">
       <h1>Login</h1>
       <v-form validate-on="submit lazy" @submit.prevent="onSubmit">
-        <v-text-field label="Username" variant="outlined" prepend-inner-icon="mdi-account-circle"></v-text-field>
+        <v-text-field label="Username" variant="outlined" prepend-inner-icon="mdi-account-circle" v-model="username">
+        </v-text-field>
         <v-text-field label="Password" variant="outlined" prepend-inner-icon="mdi-form-textbox-password"
                       :append-inner-icon="showPass ? 'mdi-eye' : 'mdi-eye-off'" :type="showPass ? 'text' : 'password'"
-                      @click:append-inner="showPass = !showPass"></v-text-field>
+                      @click:append-inner="showPass = !showPass" v-model="password"></v-text-field>
         <div class="btn-container">
           <v-checkbox label="Stay logged in" style="display: inline-flex"></v-checkbox>
           <v-btn variant="tonal" type="submit">
