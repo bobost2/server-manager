@@ -5,6 +5,7 @@ import com.bobost.panel_back_end.data.repository.UserRepository;
 import com.bobost.panel_back_end.exception.user.IncorrectPasswordException;
 import com.bobost.panel_back_end.exception.user.PasswordRequirementNotMetException;
 import com.bobost.panel_back_end.exception.user.UserNotFoundException;
+import com.bobost.panel_back_end.exception.user.UsernameRequirementsNotMetException;
 import com.bobost.panel_back_end.service.UserService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public boolean hasOTP(String username) {
+        User user = userRepository.findByUsername(username).orElseThrow(
+                () -> new UserNotFoundException("User not found - " + username)
+        );
+        return user.isTotpEnabled();
+    }
+
+    @Override
     public void updatePassword(String username, String oldPassword, String newPassword) {
         if (newPassword.length() < 4) {
             throw new PasswordRequirementNotMetException("New password must be at least 4 characters long");
@@ -64,6 +73,30 @@ public class UserServiceImpl implements UserService {
             user.setPasswordExpired(false);
         }
 
+        userRepository.save(user);
+    }
+
+    @Override
+    public void updateUsername(String oldUsername, String newUsername) {
+        newUsername = newUsername.trim();
+
+        if (newUsername.length() < 4) {
+            throw new UsernameRequirementsNotMetException("New username must be at least 4 characters long");
+        }
+
+        if (oldUsername.equals(newUsername)) {
+            throw new UsernameRequirementsNotMetException("New username must be different from old username");
+        }
+
+        User user = userRepository.findByUsername(oldUsername).orElseThrow(
+                () -> new UserNotFoundException("User not found - " + oldUsername)
+        );
+
+        if (userRepository.existsByUsername(newUsername)) {
+            throw new UsernameRequirementsNotMetException("Username is already taken");
+        }
+
+        user.setUsername(newUsername);
         userRepository.save(user);
     }
 }

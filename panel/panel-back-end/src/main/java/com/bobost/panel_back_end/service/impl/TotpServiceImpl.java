@@ -27,7 +27,7 @@ public class TotpServiceImpl implements TotpService {
 
     @Override
     public String getOtpURI(String secret, String username) {
-        final String issuer = "Game Sever Panel";
+        final String issuer = "Server Manager Panel";
         return "otpauth://totp/" + username + "?secret=" + secret + "&issuer=" + issuer
                 + "&algorithm=SHA1"
                 + "&digits=6"

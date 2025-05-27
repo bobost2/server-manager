@@ -3,6 +3,13 @@ body {
     --text-color-1: #ccc;
     --green-lighter: #4b6f49;
     --green-darker: #2d4830;
+    --transparent-bg-color: #00000030;
+    --shadow-color: #000000a1;
+    --app-header-size: 55px;
+
+    --red-alert: #ff6161;
+    --green-alert: #5cc950;
+
     color: var(--text-color-1);
     background: linear-gradient(var(--green-lighter), var(--green-darker)) fixed;
 }

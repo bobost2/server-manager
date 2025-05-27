@@ -2,15 +2,21 @@
   definePageMeta({
     middleware: 'auth'
   })
+
+  useHead({
+    title: 'Instances - Server Manager'
+  })
 </script>
 
 <template>
-  <h1>
-    Main Page
-  </h1>
-  <v-btn variant="tonal">
-    Example Button
-  </v-btn>
+  <div style="padding: 10px;">
+    <h1>
+      Main Page
+    </h1>
+    <v-btn variant="tonal">
+      Example Button
+    </v-btn>
+  </div>
 </template>
 
 <style scoped>

@@ -37,6 +37,13 @@ public class UserExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(UsernameRequirementsNotMetException.class)
+    public ResponseEntity<ErrorResponse> handleUsernameRequirementsNotMet(UsernameRequirementsNotMetException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(),
+                "Username requirements not met", ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(UserDoesNotHaveTOTPException.class)
     public ResponseEntity<ErrorResponse> handleUserDoesNotHaveTOTP(UserDoesNotHaveTOTPException ex) {
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(),

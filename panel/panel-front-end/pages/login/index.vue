@@ -7,7 +7,7 @@ definePageMeta({
 })
 
 useHead({
-  title: 'Server Manager - Login'
+  title: 'Login - Server Manager'
 })
 
 const showPass = ref(false)

@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="height: 100vh">
     <NuxtRouteAnnouncer />
     <NuxtLayout>
       <NuxtPage />
