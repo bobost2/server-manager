@@ -1,5 +1,12 @@
 <script setup lang="ts">
 
+import Toast from "~/components/Toast.vue";
+import QRCode from "qrcode";
+import {VOtpInput} from "vuetify/components";
+
+const toastOpened = ref(false);
+const toastContents = ref("");
+
 // -------------------------------------
 // Username change functionality
 // -------------------------------------
@@ -43,7 +50,8 @@ async function updateUsername() {
     },
     credentials: 'include'
   }).then(() => {
-    alert("Username changed successfully!"); // Change this to a toast or something
+    toastContents.value = "Username changed successfully!";
+    toastOpened.value = true;
   }).catch((error) => {
     usernameError.value = error.data.message;
   }).finally(() => {
@@ -57,6 +65,9 @@ async function updateUsername() {
 // -------------------------------------
 
 const otpActive = ref(false);
+const otpDialog = ref(false);
+const otpDisableDialog = ref(false);
+const otpLoading = ref(false);
 
 const { data: otpData } = await useFetch<boolean>("http://localhost:8080/user/has-2fa", {
   method: 'GET',
@@ -69,8 +80,71 @@ watchEffect(() => {
   }
 });
 
-function otpButtonClicked() {
-  otpActive.value = !otpActive.value;
+const otpQRReceived = ref(false);
+const otpQR = ref('');
+const otpCode = ref('');
+const invalidOTP = ref(false);
+
+async function otpButtonClicked() {
+  if (!otpActive.value) {
+    otpDialog.value = true;
+    otpQRReceived.value = false;
+
+    await $fetch('http://localhost:8080/user/setup-2fa', {
+      method: 'POST',
+      credentials: 'include'
+    }).then(async (request: any) => {
+      otpQRReceived.value = true;
+      const qrCodeUrl = request.qrCodeURI;
+      otpQR.value = await QRCode.toDataURL(qrCodeUrl);
+    }).catch((error) => {
+      console.log(error);
+    })
+  } else {
+    otpDisableDialog.value = true;
+  }
+}
+
+async function verifyOTP() {
+  otpLoading.value = true;
+
+  await $fetch('http://localhost:8080/user/verify-2fa', {
+    method: 'POST',
+    body: {
+      code: otpCode.value
+    },
+    credentials: 'include'
+  }).then(() => {
+    otpLoading.value = false;
+    otpDialog.value = false;
+    otpCode.value = '';
+    otpActive.value = true;
+  }).catch(() => {
+    otpLoading.value = false;
+    invalidOTP.value = true;
+    otpCode.value = '';
+  })
+}
+
+async function disableOTP() {
+  otpLoading.value = true;
+
+  await $fetch('http://localhost:8080/user/disable-2fa', {
+    method: 'POST',
+    body: {
+      code: otpCode.value
+    },
+    credentials: 'include'
+  }).then(() => {
+    otpLoading.value = false;
+    otpDisableDialog.value = false;
+    otpCode.value = '';
+    otpActive.value = false;
+  }).catch(() => {
+    otpLoading.value = false;
+    invalidOTP.value = true;
+    otpCode.value = '';
+  })
 }
 
 // -------------------------------------
@@ -139,7 +213,8 @@ async function onChangePassword() {
     },
     credentials: 'include'
   }).then(() => {
-    alert("Password changed successfully!"); // Change this to a toast or something
+    toastContents.value = "Password changed successfully!";
+    toastOpened.value = true;
   }).catch((error) => {
     passwordResetError.value = true;
 
@@ -154,6 +229,55 @@ async function onChangePassword() {
 </script>
 
 <template>
+  <Toast type="success" enable-progress v-model:opened="toastOpened" :time="5000">{{ toastContents }}</Toast>
+  <v-dialog v-model="otpDialog" width="auto" :persistent="otpLoading">
+    <div class="dialog-card">
+      <h2>Setup OTP</h2>
+      <VDivider/>
+      <v-form validate-on="submit lazy" @submit.prevent="verifyOTP" class="otp-form">
+        <div class="otp-contents">
+          <img v-if="otpQRReceived" :src="otpQR" alt="QR Code" class="otp-qr"/>
+          <div class="otp-qr-loader" v-else>
+            <v-progress-circular indeterminate :size="40"/>
+          </div>
+          <div>
+            <p class="otp-instructions">
+              Scan the QR code with your preferred
+              authenticator app and enter the code bellow:
+            </p>
+            <v-otp-input placeholder="0" v-model="otpCode" :error="invalidOTP"></v-otp-input>
+          </div>
+        </div>
+        <div class="dialog-button-container">
+          <VBtn variant="tonal" :disabled="otpLoading" @click="otpDialog = false">Close</VBtn>
+          <VBtn variant="tonal" :loading="otpLoading || !otpQRReceived"
+                :disabled="otpCode.length < 6" type="submit">Verify</VBtn>
+        </div>
+      </v-form>
+    </div>
+  </v-dialog>
+
+  <v-dialog v-model="otpDisableDialog" width="auto" :persistent="otpLoading">
+    <div class="dialog-card">
+      <h2>Disable OTP</h2>
+      <VDivider/>
+      <v-form validate-on="submit lazy" @submit.prevent="disableOTP" class="otp-form">
+        <div class="otp-contents">
+          <div>
+            <p style="text-align: center">
+              Please enter your OTP code to confirm disabling OTP authentication:
+            </p>
+            <v-otp-input placeholder="0" v-model="otpCode" :error="invalidOTP"></v-otp-input>
+          </div>
+        </div>
+        <div class="dialog-button-container">
+          <VBtn variant="tonal" :disabled="otpLoading" @click="otpDisableDialog = false">Close</VBtn>
+          <VBtn variant="tonal" :loading="otpLoading" :disabled="otpCode.length < 6" type="submit">Disable OTP</VBtn>
+        </div>
+      </v-form>
+    </div>
+  </v-dialog>
+
   <div class="content-box">
     <div class="fitted-card">
       <h2>
@@ -177,7 +301,7 @@ async function onChangePassword() {
           <span v-if="otpActive" class="active-opt-text">Active</span>
           <span v-else class="not-active-opt-text">Not Active</span>
         </p>
-        <VBtn @click="otpButtonClicked" variant="tonal">{{ otpActive ? "Disable" : "Enable" }} OTP</VBtn>
+        <VBtn @click="otpButtonClicked" variant="tonal">{{ otpActive ? "Disable" : "Setup" }} OTP</VBtn>
       </div>
     </div>
 
@@ -282,5 +406,61 @@ h2 {
   margin-top: 10px;
   display: flex;
   flex-direction: column;
+}
+
+.dialog-card {
+  background: var(--dialog-bg-color);
+  border-radius: 5px;
+  box-shadow: 0 0 5px 1px var(--shadow-color);
+  width: 550px;
+}
+
+@media (max-width: 600px) {
+  .dialog-card {
+    width: 80vw;
+  }
+}
+
+.dialog-button-container {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.otp-form {
+  padding: 10px;
+}
+
+.otp-qr-loader {
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--transparent-bg-color);
+  border-radius: 10px;
+  box-shadow: 0 0 5px 1px var(--shadow-color);
+}
+
+.otp-qr {
+  width: 150px;
+  height: 150px;
+  border-radius: 10px;
+  box-shadow: 0 0 5px 1px var(--shadow-color);
+}
+
+.otp-instructions {
+  max-width: 320px;
+  text-align: center;
+}
+
+.otp-contents {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  align-content: center;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  margin: 5px 15px 15px;
 }
 </style>
