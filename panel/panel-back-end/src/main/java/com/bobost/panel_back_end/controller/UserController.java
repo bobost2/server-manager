@@ -1,22 +1,14 @@
 package com.bobost.panel_back_end.controller;
 
-import com.bobost.panel_back_end.dto.user.ChangeUsernameDto;
-import com.bobost.panel_back_end.dto.user.OTPCodeDto;
-import com.bobost.panel_back_end.dto.user.ResetPasswordDto;
-import com.bobost.panel_back_end.dto.user.SessionsDto;
+import com.bobost.panel_back_end.dto.user.*;
 import com.bobost.panel_back_end.service.TotpService;
 import com.bobost.panel_back_end.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.session.SessionInformation;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -29,82 +21,54 @@ import java.util.Map;
 public class UserController {
     private final TotpService totpService;
     private final UserService userService;
-    private final UserDetailsService userDetailsService;
     private final SessionRegistry sessionRegistry;
 
-    public UserController(TotpService totpService, UserService userService, UserDetailsService userDetailsService, SessionRegistry sessionRegistry) {
+    public UserController(TotpService totpService, UserService userService, SessionRegistry sessionRegistry) {
         this.totpService = totpService;
         this.userService = userService;
-        this.userDetailsService = userDetailsService;
         this.sessionRegistry = sessionRegistry;
     }
 
     @GetMapping("/info")
-    public Map<String,Object> getInfo(Authentication auth) {
-        auth.getCredentials();
-        return Map.of(
-                "username", auth.getName(),
-                "permissions", auth.getAuthorities().stream()
-                        .map(GrantedAuthority::getAuthority)
-                        .toList()
-        );
+    public UserInfoDTO getInfo(Principal principal) {
+        return userService.getUserInfo(Long.parseLong(principal.getName()));
     }
 
     @PostMapping("/setup-2fa")
     public ResponseEntity<?> setup2fa(Principal principal) {
-        final String QRCodeURI = totpService.setupTotpAndReturnURI(principal.getName());
+        final String QRCodeURI = totpService.setupTotpAndReturnURI(Long.parseLong(principal.getName()));
         return ResponseEntity.ok().body(Map.of("qrCodeURI", QRCodeURI));
     }
 
     @PostMapping("/verify-2fa")
     public void verify2fa(@RequestBody OTPCodeDto requestBody, Principal principal) {
-        totpService.verifyTotp(principal.getName(), requestBody.code);
+        totpService.verifyTotp(Long.parseLong(principal.getName()), requestBody.code);
     }
 
     @PostMapping("/disable-2fa")
     public void disable2fa(@RequestBody OTPCodeDto requestBody, Principal principal) {
-        totpService.disableTotp(principal.getName(), requestBody.code);
+        totpService.disableTotp(Long.parseLong(principal.getName()), requestBody.code);
     }
 
     @GetMapping("/has-password-expired")
     public boolean hasPasswordExpired(Principal principal) {
-        return userService.hasPasswordExpired(principal.getName());
+        return userService.hasPasswordExpired(Long.parseLong(principal.getName()));
     }
 
     @GetMapping("/has-2fa")
     public boolean has2fa(Principal principal) {
-        return userService.hasOTP(principal.getName());
+        return totpService.isTotpEnabled(Long.parseLong(principal.getName()));
     }
 
     @PatchMapping("/update-password")
     public void updatePassword(@RequestBody ResetPasswordDto requestBody, Principal principal) {
-        userService.updatePassword(principal.getName(), requestBody.oldPassword, requestBody.newPassword);
+        userService.updatePassword(Long.parseLong(principal.getName()), requestBody.oldPassword, requestBody.newPassword);
     }
 
     @PatchMapping("/update-username")
     public void updateUsername(@RequestBody ChangeUsernameDto requestBody,
-                               @AuthenticationPrincipal UserDetails userDetails, HttpServletRequest request) {
-        userService.updateUsername(userDetails.getUsername(), requestBody.newUsername);
-
-        // Update the session with the new username
-        UserDetails newDetails = userDetailsService.loadUserByUsername(requestBody.newUsername);
-        if (newDetails != null) {
-            UsernamePasswordAuthenticationToken newAuth = new UsernamePasswordAuthenticationToken(
-                    newDetails, newDetails.getPassword(), newDetails.getAuthorities());
-            newAuth.setDetails(SecurityContextHolder.getContext().getAuthentication().getDetails());
-            SecurityContextHolder.getContext().setAuthentication(newAuth);
-        }
-
-        // Invalidate other sessions
-        List<SessionInformation> sessions =
-                sessionRegistry.getAllSessions(userDetails, false);
-
-        String currentSessionId = request.getSession().getId();
-        for (SessionInformation session : sessions) {
-            if (!session.getSessionId().equals(currentSessionId)) {
-                session.expireNow();
-            }
-        }
+                               @AuthenticationPrincipal UserDetails userDetails) {
+        userService.updateUsername(Long.parseLong(userDetails.getUsername()), requestBody.newUsername);
     }
 
 

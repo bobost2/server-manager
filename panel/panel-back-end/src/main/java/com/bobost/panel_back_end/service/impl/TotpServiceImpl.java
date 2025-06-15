@@ -62,30 +62,30 @@ public class TotpServiceImpl implements TotpService {
     }
 
     @Override
-    public String setupTotpAndReturnURI(String username) {
-        User user = userRepository.findByUsername(username).orElseThrow(
-                () -> new UserNotFoundException("User not found - " + username)
+    public String setupTotpAndReturnURI(long userId) {
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new UserNotFoundException("User with ID " + userId + " not found")
         );
 
         if (user.isTotpEnabled()) {
-            throw new UserHasAlreadyTOTPException("User " + username + " already has TOTP enabled");
+            throw new UserHasAlreadyTOTPException("User " + user.getUsername() + " already has TOTP enabled");
         }
 
         String secret = this.generateSecret();
         user.setTotpSecret(secret);
         userRepository.save(user);
 
-        return this.getOtpURI(secret, username);
+        return this.getOtpURI(secret, user.getUsername());
     }
 
     @Override
-    public void verifyTotp(String username, String code) {
-        User user = userRepository.findByUsername(username).orElseThrow(
-                () -> new UserNotFoundException("User not found - " + username)
+    public void verifyTotp(long userId, String code) {
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new UserNotFoundException("User with ID " + userId + " not found")
         );
 
         if (user.isTotpEnabled()) {
-            throw new UserHasAlreadyTOTPException("User " + username + " already has TOTP enabled");
+            throw new UserHasAlreadyTOTPException("User " + user.getUsername() + " already has TOTP enabled");
         }
 
         if (this.verifyCode(user.getTotpSecret(), code)) {
@@ -97,13 +97,13 @@ public class TotpServiceImpl implements TotpService {
     }
 
     @Override
-    public void disableTotp(String username, String code) {
-        User user = userRepository.findByUsername(username).orElseThrow(
-                () -> new UserNotFoundException("User not found - " + username)
+    public void disableTotp(long userId, String code) {
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new UserNotFoundException("User with ID " + userId + " not found")
         );
 
         if (!user.isTotpEnabled()) {
-            throw new UserDoesNotHaveTOTPException("User " + username + " does not have TOTP enabled");
+            throw new UserDoesNotHaveTOTPException("User " + user.getUsername() + " does not have TOTP enabled");
         }
 
         if (this.verifyCode(user.getTotpSecret(), code)) {
@@ -116,9 +116,18 @@ public class TotpServiceImpl implements TotpService {
     }
 
     @Override
+    public boolean isTotpEnabled(long userId) {
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new UserNotFoundException("User with ID " + userId + " not found")
+        );
+
+        return user.isTotpEnabled();
+    }
+
+    @Override
     public boolean isTotpEnabled(String username) {
         User user = userRepository.findByUsername(username).orElseThrow(
-                () -> new UserNotFoundException("User not found - " + username)
+                () -> new UserNotFoundException("User with username " + username + " not found")
         );
 
         return user.isTotpEnabled();

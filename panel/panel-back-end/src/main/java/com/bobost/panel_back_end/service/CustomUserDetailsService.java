@@ -25,6 +25,8 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException(username));
         List<String> permissions = new ArrayList<>();
 
+        //Deprecated segment, since we are checking the DB instead of the session
+        //noinspection DuplicatedCode
         if (user.isAdmin()) {
             permissions.add("ADMIN");
         } else {
@@ -40,9 +42,10 @@ public class CustomUserDetailsService implements UserDetailsService {
                 );
             }
         }
+        //End of deprecated segment
 
         return org.springframework.security.core.userdetails.User
-                .withUsername(user.getUsername())
+                .withUsername(user.getId().toString())
                 .password(user.getPassword())
                 .authorities(permissions.toArray(String[]::new))
                 .build();

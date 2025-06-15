@@ -5,11 +5,12 @@ public interface TotpService {
     String getOtpURI(String secret, String username);
     boolean verifyCode(String secret, String code);
 
-    String setupTotpAndReturnURI(String username);
-    void verifyTotp(String username, String code);
-    void disableTotp(String username, String code);
+    String setupTotpAndReturnURI(long userId);
+    void verifyTotp(long userId, String code);
+    void disableTotp(long userId, String code);
 
     // Login specific methods
+    boolean isTotpEnabled(long userId);
     boolean isTotpEnabled(String username);
     boolean verifyLoginCode(String username, String code);
 }
