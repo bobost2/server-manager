@@ -6,13 +6,14 @@ import com.bobost.panel_back_end.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.session.SessionInformation;
-import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -21,12 +22,13 @@ import java.util.Map;
 public class UserController {
     private final TotpService totpService;
     private final UserService userService;
-    private final SessionRegistry sessionRegistry;
+    private final FindByIndexNameSessionRepository<? extends Session> sessions;
 
-    public UserController(TotpService totpService, UserService userService, SessionRegistry sessionRegistry) {
+    public UserController(TotpService totpService, UserService userService,
+                          FindByIndexNameSessionRepository<? extends Session> sessions) {
         this.totpService = totpService;
         this.userService = userService;
-        this.sessionRegistry = sessionRegistry;
+        this.sessions = sessions;
     }
 
     @GetMapping("/info")
@@ -71,38 +73,46 @@ public class UserController {
         userService.updateUsername(Long.parseLong(userDetails.getUsername()), requestBody.newUsername);
     }
 
-
-    // TODO: Find a method to restore the session after application restart
     @GetMapping("/sessions")
-    public List<SessionsDto> getUserSessions(@AuthenticationPrincipal UserDetails userDetails,
+    public List<SessionsDto> getUserSessions(Principal principal,
                                              HttpServletRequest request) {
-        List<SessionsDto> sessionsDtoList = new ArrayList<>();
+        List<SessionsDto> sessionsList = new ArrayList<>();
 
-        var sessions = sessionRegistry.getAllSessions(userDetails, false);
-        for (SessionInformation session : sessions) {
+        Map<String, ? extends Session> userSessions =
+                sessions.findByIndexNameAndIndexValue(
+                        FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME,
+                        principal.getName()
+                );
+
+        String currentId = request.getSession().getId();
+        for (var entry : userSessions.entrySet()) {
+            String sessionId = entry.getKey();
+            Session session = entry.getValue();
+
             SessionsDto sessionDto = new SessionsDto();
-            sessionDto.setCurrentSession(session.getSessionId().equals(request.getSession().getId()));
-            String obfuscatedSessionId =
-                    session.getSessionId().substring(0, 4) + "...";
-            sessionDto.setSessionId(obfuscatedSessionId);
-            sessionDto.setLastRequest(session.getLastRequest());
+            sessionDto.setCurrentSession(sessionId.equals(currentId));
+            sessionDto.setSessionId(sessionId.substring(0, 4) + "...");
+            sessionDto.setLastRequest(Date.from(session.getLastAccessedTime()));
 
-            sessionsDtoList.add(sessionDto);
+            sessionsList.add(sessionDto);
         }
-
-        return sessionsDtoList;
+        return sessionsList;
     }
 
     @DeleteMapping("/sessions")
-    public void deleteUserSessions(@AuthenticationPrincipal UserDetails userDetails,
+    public void deleteUserSessions(Principal principal,
                                    HttpServletRequest request) {
-        List<SessionInformation> sessions =
-                sessionRegistry.getAllSessions(userDetails, false);
+        Map<String, ? extends Session> userSessions =
+                sessions.findByIndexNameAndIndexValue(
+                        FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME,
+                        principal.getName()
+                );
 
-        String currentSessionId = request.getSession().getId();
-        for (SessionInformation session : sessions) {
-            if (!session.getSessionId().equals(currentSessionId)) {
-                session.expireNow();
+        String currentId = request.getSession().getId();
+
+        for (String sessionId : userSessions.keySet()) {
+            if (!sessionId.equals(currentId)) {
+                sessions.deleteById(sessionId);
             }
         }
     }
