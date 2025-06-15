@@ -7,9 +7,13 @@ export default defineNuxtRouteMiddleware(async () => {
 
     await $fetch("http://localhost:8080/user/info", {
         credentials: 'include'
-    }).then(() => {
-        returnNav = navigateTo('/');
+    }).then((response:any) => {
+        // Check for ADMIN or PANEL permission
+        if (!response.permissions?.includes('ADMIN')) {
+            returnNav = navigateTo('/');
+        }
     }).catch(() => {
+        returnNav = navigateTo('/login');
     })
 
     return returnNav;

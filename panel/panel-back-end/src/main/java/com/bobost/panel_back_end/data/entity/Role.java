@@ -17,11 +17,11 @@ public class Role {
     private String name;
 
     @Column(nullable = false)
-    private boolean permission1;
+    private boolean perm_instance_lifecycle;
 
     @Column(nullable = false)
-    private boolean permission2;
+    private boolean perm_instance_files;
 
     @Column(nullable = false)
-    private boolean permission3;
+    private boolean perm_instance_console;
 }

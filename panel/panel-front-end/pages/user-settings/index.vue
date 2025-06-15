@@ -30,15 +30,5 @@ const sidebarButtons : SidebarButton[] = [
 </template>
 
 <style scoped>
-.page-inside-contents {
-  display: flex;
-  justify-content: flex-start;
-  flex-direction: row;
-  height: calc(100vh - var(--app-header-size));
-}
 
-.sidebar-title {
-  text-align: center;
-  padding: 5px;
-}
 </style>

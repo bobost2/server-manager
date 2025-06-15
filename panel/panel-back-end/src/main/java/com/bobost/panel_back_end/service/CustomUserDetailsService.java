@@ -7,34 +7,44 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
     private final UserRepository userRepository;
+    private final RoleService roleService;
 
-    public CustomUserDetailsService(UserRepository userRepository) {
+    public CustomUserDetailsService(UserRepository userRepository, RoleService roleService) {
         this.userRepository = userRepository;
+        this.roleService = roleService;
     }
 
     @Override
     public UserDetails loadUserByUsername(String username) {
         User user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException(username));
-        String role;
+        List<String> permissions = new ArrayList<>();
 
         if (user.isAdmin()) {
-            role = "ADMIN";
+            permissions.add("ADMIN");
         } else {
             var userRole = user.getRole();
             if (userRole != null) {
-                role = userRole.getName(); //TODO: Get the separate permission instead
-            } else {
-                role = "NONE";
+                var perms = roleService.getRoleWithPermissions(userRole);
+                perms.getPermissions().forEach(
+                        (key, value) -> {
+                            if (value) {
+                                permissions.add(key);
+                            }
+                        }
+                );
             }
         }
 
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getUsername())
                 .password(user.getPassword())
-                .authorities(role)
+                .authorities(permissions.toArray(String[]::new))
                 .build();
     }
 }

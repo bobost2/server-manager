@@ -44,7 +44,7 @@ async function updateUsername() {
   }
 
   await $fetch('http://localhost:8080/user/update-username', {
-    method: 'POST',
+    method: 'PATCH',
     body: {
       newUsername: username.value
     },
@@ -206,7 +206,7 @@ async function onChangePassword() {
 
   passwordLoading.value = true;
   await $fetch('http://localhost:8080/user/update-password', {
-    method: 'POST',
+    method: 'PATCH',
     body: {
       oldPassword: oldPassword.value,
       newPassword: newPassword.value

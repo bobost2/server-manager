@@ -76,12 +76,12 @@ public class UserController {
         return userService.hasOTP(principal.getName());
     }
 
-    @PostMapping("/update-password")
+    @PatchMapping("/update-password")
     public void updatePassword(@RequestBody ResetPasswordDto requestBody, Principal principal) {
         userService.updatePassword(principal.getName(), requestBody.oldPassword, requestBody.newPassword);
     }
 
-    @PostMapping("/update-username")
+    @PatchMapping("/update-username")
     public void updateUsername(@RequestBody ChangeUsernameDto requestBody,
                                @AuthenticationPrincipal UserDetails userDetails, HttpServletRequest request) {
         userService.updateUsername(userDetails.getUsername(), requestBody.newUsername);

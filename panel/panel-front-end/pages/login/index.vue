@@ -160,7 +160,7 @@ async function onChangePassword() {
 
   loading.value = true;
   await $fetch('http://localhost:8080/user/update-password', {
-    method: 'POST',
+    method: 'PATCH',
     body: {
       oldPassword: oldPassword.value,
       newPassword: newPassword.value
