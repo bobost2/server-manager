@@ -114,8 +114,6 @@ public class RoleServiceImpl implements RoleService {
         role = convertPermListToRole(permissions, role);
 
         roleRepository.save(role);
-
-        // TODO: Major security bug: If the role is updated, it does not affect the currently logged-in users, due to how Spring Session works.
     }
 
     @Override

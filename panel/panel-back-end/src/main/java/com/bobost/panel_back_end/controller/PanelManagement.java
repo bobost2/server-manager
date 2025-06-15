@@ -23,24 +23,24 @@ public class PanelManagement {
     // Role management
     //-----------------------------------------------------------
     @PostMapping("/roles/create")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("@security.admin")
     public void createRole(@RequestBody CreateRoleDTO createRoleDTO) {
         roleService.createRole(createRoleDTO);
     }
 
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("@security.admin")
     @PatchMapping("/roles/update")
     public void updateRole(@RequestBody UpdateRoleDTO updateRoleDTO) {
         roleService.updateRole(updateRoleDTO);
     }
 
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("@security.admin")
     @GetMapping("/roles/get")
     public List<RoleWithPermsDTO> getRoles() {
         return roleService.getAllRoles();
     }
 
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("@security.admin")
     @DeleteMapping("/roles/delete")
     public void deleteRole(@RequestBody DeleteRoleDTO deleteRoleDTO) {
         roleService.deleteRole(deleteRoleDTO.getRoleId());
@@ -49,25 +49,25 @@ public class PanelManagement {
     //-----------------------------------------------------------
     // User management
     //-----------------------------------------------------------
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("@security.admin")
     @PostMapping("/register-user")
     public void registerUser() {
 
     }
 
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("@security.admin")
     @PatchMapping("/update-user")
     public void updateUser() {
 
     }
 
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("@security.admin")
     @GetMapping("/get-users")
     public void getUsers() {
 
     }
 
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("@security.admin")
     @DeleteMapping("/delete-user")
     public void deleteUser() {
 
