@@ -7,7 +7,7 @@ import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.session.jdbc.config.annotation.web.http.EnableJdbcHttpSession;
 
 @Configuration
-@EnableJdbcHttpSession
+@EnableJdbcHttpSession(maxInactiveIntervalInSeconds = -1)
 public class SessionConfig {
     @Bean
     public static ServletListenerRegistrationBean<HttpSessionEventPublisher>

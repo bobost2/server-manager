@@ -6,10 +6,7 @@ import com.bobost.panel_back_end.data.repository.UserRepository;
 import com.bobost.panel_back_end.dto.roles.CreateRoleDTO;
 import com.bobost.panel_back_end.dto.roles.RoleWithPermsDTO;
 import com.bobost.panel_back_end.dto.roles.UpdateRoleDTO;
-import com.bobost.panel_back_end.exception.role.NoSuchPermissionExistsException;
-import com.bobost.panel_back_end.exception.role.RoleDoesNotExistException;
-import com.bobost.panel_back_end.exception.role.RoleHasBeenAssignedException;
-import com.bobost.panel_back_end.exception.role.RoleReflectAccessException;
+import com.bobost.panel_back_end.exception.role.*;
 import com.bobost.panel_back_end.service.RoleService;
 import org.springframework.stereotype.Service;
 
@@ -95,6 +92,11 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public void createRole(CreateRoleDTO roleRequest) {
         Role role = new Role();
+
+        if (roleRepository.existsByName(roleRequest.getName())) {
+            throw new RoleNameAlreadyExistsException("Role name " + roleRequest.getName() + " already exists.");
+        }
+
         role.setName(roleRequest.getName());
 
         Map<String, Boolean> permissions = roleRequest.getPermissions();
@@ -108,6 +110,9 @@ public class RoleServiceImpl implements RoleService {
         Role role = roleRepository.findById(roleRequest.getId())
                 .orElseThrow(() -> new RoleDoesNotExistException("Role " + roleRequest.getId() + " does not exist."));
 
+        if (!role.getName().equals(roleRequest.getName()) && roleRepository.existsByName(roleRequest.getName())) {
+            throw new RoleNameAlreadyExistsException("Role name " + roleRequest.getName() + " already exists.");
+        }
         role.setName(roleRequest.getName());
 
         Map<String, Boolean> permissions = roleRequest.getPermissions();
