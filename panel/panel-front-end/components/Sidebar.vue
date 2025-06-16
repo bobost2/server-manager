@@ -67,8 +67,8 @@ function onSelect(itemId: string) {
     .sidePanel {
       --side-panel-min-width: 50px;
 
-      width: var(--side-panel-min-width);
-      min-width: var(--side-panel-min-width);
+      width: var(--side-panel-min-width) !important;
+      min-width: var(--side-panel-min-width) !important;
     }
 
     .button-shrink {

@@ -38,6 +38,18 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
+    public List<String> getAllPermissions() {
+        List<String> permissions = new ArrayList<>();
+        for (Field field : Role.class.getDeclaredFields()) {
+            if (field.getType() == boolean.class || field.getType() == Boolean.class
+                    || field.getName().startsWith("perm_")) {
+                permissions.add(field.getName());
+            }
+        }
+        return permissions;
+    }
+
+    @Override
     public RoleWithPermsDTO getRoleWithPermissions(Role role) {
         RoleWithPermsDTO roleWithPermsDTO = new RoleWithPermsDTO();
 
@@ -90,7 +102,7 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public void createRole(CreateRoleDTO roleRequest) {
+    public long createRole(CreateRoleDTO roleRequest) {
         Role role = new Role();
 
         if (roleRepository.existsByName(roleRequest.getName())) {
@@ -103,6 +115,7 @@ public class RoleServiceImpl implements RoleService {
         role = convertPermListToRole(permissions, role);
 
         roleRepository.save(role);
+        return role.getId();
     }
 
     @Override

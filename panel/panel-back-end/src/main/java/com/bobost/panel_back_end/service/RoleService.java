@@ -10,9 +10,10 @@ import java.util.Map;
 
 public interface RoleService {
     List<RoleWithPermsDTO> getAllRoles();
+    List<String> getAllPermissions();
     RoleWithPermsDTO getRoleWithPermissions(Role role);
     Role convertPermListToRole(Map<String, Boolean> permissions, Role role);
-    void createRole(CreateRoleDTO roleRequest);
+    long createRole(CreateRoleDTO roleRequest);
     void updateRole(UpdateRoleDTO roleRequest);
     void deleteRole(Long roleId);
 }

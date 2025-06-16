@@ -335,26 +335,6 @@ async function onChangePassword() {
 </template>
 
 <style scoped>
-.content-box {
-  width: 100%;
-  overflow: auto;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  align-items: flex-start;
-}
-
-/*noinspection CssUnusedSymbol*/
-.full-screen-card {
-  background: var(--transparent-bg-color);
-  --card-margin: 15px;
-  margin: var(--card-margin);
-  border-radius: 5px;
-  height: calc(100% - (var(--card-margin) * 2));
-  box-shadow: 0 0 5px 1px var(--shadow-color);
-}
-
 .fitted-card {
   background: var(--transparent-bg-color);
   --card-margin: 15px;

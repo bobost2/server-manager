@@ -29,8 +29,8 @@ public class PanelManagement {
     //-----------------------------------------------------------
     @PostMapping("/roles/create")
     @PreAuthorize("@security.admin")
-    public void createRole(@RequestBody CreateRoleDTO createRoleDTO) {
-        roleService.createRole(createRoleDTO);
+    public long createRole(@RequestBody CreateRoleDTO createRoleDTO) {
+        return roleService.createRole(createRoleDTO);
     }
 
     @PreAuthorize("@security.admin")
@@ -46,6 +46,12 @@ public class PanelManagement {
     }
 
     @PreAuthorize("@security.admin")
+    @GetMapping("/roles/get-permissions")
+    public List<String> getPermissions() {
+        return roleService.getAllPermissions();
+    }
+
+    @PreAuthorize("@security.admin")
     @DeleteMapping("/roles/delete")
     public void deleteRole(@RequestBody DeleteRoleDTO deleteRoleDTO) {
         roleService.deleteRole(deleteRoleDTO.getRoleId());
@@ -56,8 +62,8 @@ public class PanelManagement {
     //-----------------------------------------------------------
     @PreAuthorize("@security.admin")
     @PostMapping("/register-user")
-    public void registerUser(@RequestBody RegisterUserDTO registerUserDTO) {
-        userManagementService.registerUser(registerUserDTO);
+    public long registerUser(@RequestBody RegisterUserDTO registerUserDTO) {
+        return userManagementService.registerUser(registerUserDTO);
     }
 
     @PreAuthorize("@security.admin")

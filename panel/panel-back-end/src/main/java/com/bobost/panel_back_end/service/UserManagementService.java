@@ -8,7 +8,7 @@ import com.bobost.panel_back_end.dto.user.management.RegisterUserDTO;
 import java.util.List;
 
 public interface UserManagementService {
-    void registerUser(RegisterUserDTO registerUserDTO);
+    long registerUser(RegisterUserDTO registerUserDTO);
     List<GetUsersDTO> getUsers(long currentUserId);
     void deleteUser(long adminUserId, long targetUserId);
 

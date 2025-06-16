@@ -34,7 +34,7 @@ public class UserManagementServiceImpl implements UserManagementService {
     }
 
     @Override
-    public void registerUser(RegisterUserDTO registerUserDTO) {
+    public long registerUser(RegisterUserDTO registerUserDTO) {
         User user = new User();
 
         String username = registerUserDTO.getUsername();
@@ -71,6 +71,8 @@ public class UserManagementServiceImpl implements UserManagementService {
         }
 
         userRepository.save(user);
+
+        return user.getId();
     }
 
     @Override

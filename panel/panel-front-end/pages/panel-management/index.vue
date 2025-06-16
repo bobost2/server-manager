@@ -50,3 +50,26 @@ const sidebarButtons : SidebarButton[] = [
 <style scoped>
 
 </style>
+
+<style>
+/*noinspection CssUnusedSymbol*/
+@media (max-width: 900px) {
+  .width-constraint {
+    display: none;
+  }
+
+  .sidePanel {
+    --side-panel-min-width: 50px;
+
+    width: var(--side-panel-min-width) !important;
+    min-width: var(--side-panel-min-width) !important;
+  }
+
+  .button-shrink {
+    width: var(--side-panel-min-width) !important;
+    max-width: var(--side-panel-min-width) !important;
+    min-width: var(--side-panel-min-width) !important;
+    padding-left: calc(var(--side-panel-min-width)/2) !important;
+  }
+}
+</style>
