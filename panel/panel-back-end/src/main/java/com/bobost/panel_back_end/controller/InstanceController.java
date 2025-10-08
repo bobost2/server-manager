@@ -1,11 +1,13 @@
 package com.bobost.panel_back_end.controller;
 
+import com.bobost.panel_back_end.dto.instance.management.CreateInstanceDTO;
+import com.bobost.panel_back_end.dto.instance.management.InstanceOperationDTO;
+import com.bobost.panel_back_end.dto.instance.management.InstanceStatsDTO;
 import com.bobost.panel_back_end.service.InstanceService;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.security.Principal;
 
 @RestController
 @RequestMapping("/instance")
@@ -19,8 +21,37 @@ public class InstanceController {
 
     @PreAuthorize("@security.admin")
     @PostMapping("/create")
-    public void createInstance() {
-        instanceService.createInstance("sample-instance");
+    public long createInstance(Principal principal, @RequestBody CreateInstanceDTO createInstanceDTO) {
+        return instanceService.createInstance(Long.parseLong(principal.getName()), createInstanceDTO);
+    }
+
+    @PreAuthorize("@security.admin")
+    @DeleteMapping("/delete")
+    public void deleteInstance(@RequestBody InstanceOperationDTO instanceOperationDTO) {
+        instanceService.deleteInstance(instanceOperationDTO.getInstanceId());
+    }
+
+    @PreAuthorize("@security.isInstanceOwner(#instanceOperationDTO.instanceId) or @security.admin")
+    @PostMapping("/start")
+    public void startInstance(@RequestBody InstanceOperationDTO instanceOperationDTO) {
+        instanceService.startInstance(instanceOperationDTO.getInstanceId());
+    }
+
+    @PreAuthorize("@security.isInstanceOwner(#instanceOperationDTO.instanceId) or @security.admin")
+    @PostMapping("/stop")
+    public void stopInstance(@RequestBody InstanceOperationDTO instanceOperationDTO) {
+        instanceService.stopInstance(instanceOperationDTO.getInstanceId());
+    }
+
+    @PreAuthorize("@security.isInstanceOwner(#instanceOperationDTO.instanceId) or @security.admin")
+    @GetMapping("/info")
+    public InstanceStatsDTO getInstanceInfo(@RequestBody InstanceOperationDTO instanceOperationDTO) {
+        return instanceService.getInstanceStats(instanceOperationDTO.getInstanceId());
+    }
+
+    @GetMapping("/list")
+    public java.util.List<InstanceStatsDTO> listInstances(Principal principal) {
+        return instanceService.getAllInstances(Long.parseLong(principal.getName()));
     }
 
     @PreAuthorize("@security.admin")

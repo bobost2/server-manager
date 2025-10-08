@@ -12,7 +12,10 @@ public class ServerInstance {
     @Id @GeneratedValue
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
+    private String friendlyName;
+
+    @Column(nullable = false, unique = true, updatable = false)
     private String name;
 
     @Column(nullable = false, updatable = false)
@@ -21,6 +24,6 @@ public class ServerInstance {
     @Column(nullable = false)
     private String jwtSecret;
 
-    @Column(nullable = false)
-    private String status; // Change to enum?
+    @Column(nullable = false, unique = true)
+    private int port;
 }

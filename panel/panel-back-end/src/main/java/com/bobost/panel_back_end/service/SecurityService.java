@@ -56,4 +56,14 @@ public class SecurityService {
 
         return roleWithPerms.getPermissions().get(permission);
     }
+
+    public boolean isInstanceOwner(Long instanceId) {
+        var user = getAuthUser();
+        boolean isOwner = false;
+        var serverInstances = user.getServerInstances();
+        if (serverInstances != null) {
+            isOwner = serverInstances.stream().anyMatch(instance -> instance.getId().equals(instanceId));
+        }
+        return isOwner;
+    }
 }
